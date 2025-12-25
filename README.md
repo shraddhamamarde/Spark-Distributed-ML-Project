@@ -49,12 +49,25 @@ The dataset contains structured information about job roles and their exposure t
 - **JupyterLab (PySpark)**
 - Shared volume mounted at `/data` across all containers
 
-The dataset was manually split into three files to simulate **distributed data ownership**:
-- `jobs_master.csv`
-- `jobs_worker1.csv`
-- `jobs_worker2.csv`
+**Cluster Diagram (ASCII):**
 
-Each worker loads only its portion of the dataset, while the master coordinates execution. This setup mimics **real distributed systems** where data is not centralized.
+    +----------------+
+    |  Spark Master  |
+    |   (Driver)     |
+    +--------+-------+
+             |
+    ---------------------
+    |         |         |
++-------+--+ +----+-----+ 
+| Worker 1 | | Worker 2 | 
+| Executor | | Executor | 
++----------+ +----------+ 
+
+
+**Data Sharing:**  
+- Each worker mounts the shared `/data` volume but loads only its assigned CSV (`jobs_master.csv`, `jobs_worker1.csv`, `jobs_worker2.csv`).  
+- Spark combines these into a **unified DataFrame** for distributed processing.  
+- This setup ensures **parallel processing** without copying all data to a single node.
 
 ---
 
@@ -104,7 +117,7 @@ Each worker loads only its portion of the dataset, while the master coordinates 
 | Worker 1   | 965           | 0.9898   | 8.77            |
 | Worker 2   | 1029          | 0.9766   | 6.48            |
 
-- Smaller datasets trained faster but with more variance in F1 scores.
+- Smaller datasets trained faster due to **less data per node** but have slightly variable F1 scores.
 
 ### Step 2: Distributed Machine Learning on Unified Dataset
 - Trained single model on the full dataset distributed across all nodes.
@@ -129,14 +142,16 @@ Each worker loads only its portion of the dataset, while the master coordinates 
 
 ---
 
-## Key Observations
+## Docker Files Explanation
 
-- Spark efficiently distributes data and computation across multiple nodes.
-- Per-node training is faster on small datasets but shows variance in performance.
-- Distributed training balances speed and stability.
-- Training times confirm the advantage of **parallelism in distributed ML**.
-- Spark Web UI is essential for monitoring memory, CPU, and task distribution.
-- Docker provides a reproducible environment for multi-node clusters.
+| File                  | Purpose |
+|----------------------|---------|
+| `docker-compose.yml`  | Defines master and worker containers, shared volume, network setup |
+| `Dockerfile`          | Custom Spark image with Python and PySpark installed |
+| `notebook.ipynb`      | Full PySpark code with ML pipeline, Part 1 & Part 2 |
+| `data/*.csv`          | Node-specific datasets to simulate distributed data |
+| `README.md`           | Documentation and project overview |
+| `screenshots/`        | Spark Web UI & Docker status evidence |
 
 ---
 
@@ -151,7 +166,7 @@ Include:
   - Spark Web UI (Executors page)
   - Docker containers running (`docker ps`)
 - README.md (this file)
-- Optional: cluster architecture diagram
+
 
 ---
 
@@ -172,5 +187,5 @@ Include:
 - Distributed training improves generalization and training efficiency.  
 - Resource monitoring and tuning are critical for performance.  
 - Docker simplifies **reproducible big data environments**.  
+- Smaller per-node datasets train faster; distributed model achieves **stable high F1 score**.
 
----
